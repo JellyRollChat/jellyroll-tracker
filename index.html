@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Server Tracker</title>
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-GLhlTQ8iRABdZLl6O3oVMWSktQOp6b7In1Zl3/Jr59b6EGGoI1aFkw7cmDA6j6gD" crossorigin="anonymous">
+ 
+</head>
+<body>
+<div class="container">
+  <div class="row">
+    <div class="col">
+      <div class="row">
+        <div class="col">
+          <h1 class="h1">JellyRoll Tracker</h1>
+        </div>
+      </div>
+      <table class="table" id="server-table">
+        <thead>
+            <tr>
+                <th>Server</th>
+                <th># Users</th>
+                <th># Chatting</th>
+                <th>Uptime</th>
+            </tr>
+        </thead>
+        <tbody>
+        </tbody>
+    </table>
+    <script>
+  function fetchServerStatus(serverUrl) {
+    return fetch(`${serverUrl}/status`)
+      .then(response => response.json())
+      .catch(error => {
+        console.error(`Error fetching status for ${serverUrl}: ${error}`);
+        return {};
+      });
+  }
+  function updateTableRow(row, serverUrl, status) {
+    const link = document.createElement("a");
+    link.href = "https://"+status.serverurl;
+    link.innerText = status.serverurl;
+    link.target = "_blank";
+    row.cells[0].appendChild(link);
+    row.cells[1].innerText = status.users;
+    row.cells[2].innerText = status.sockets;
+    row.cells[3].innerText = status.uptime;
+  }
+  function createTableRow(serverUrl, status) {
+    const table = document.getElementById("server-table").getElementsByTagName("tbody")[0];
+    const row = table.insertRow();
+    const serverUrlCell = row.insertCell();
+    const userCountCell = row.insertCell();
+    const socketCountCell = row.insertCell();
+    const uptimeCell = row.insertCell();
+    updateTableRow(row, serverUrl, status);
+  }
+  function updateServerList() {
+    const table = document.getElementById("server-table").getElementsByTagName("tbody")[0];
+    while (table.rows.length > 0) {
+      table.deleteRow(0);
+    }
+    fetch("https://raw.githubusercontent.com/JellyRollChat/jellyroll-tracker/main/server-list.txt")
+      .then(response => response.text())
+      .then(serverListText => {
+        const serverList = serverListText.split("\n").filter(x => x);
+        const statusPromises = serverList.map(serverUrl => fetchServerStatus(serverUrl));
+        return Promise.all(statusPromises);
+      })
+      .then(serverStatuses => {
+        serverStatuses.sort((a, b) => a.uptime - b.uptime);
+        serverStatuses.forEach(status => {
+          createTableRow(status.serverUrl, status);
+        });
+      });
+  }
+  window.onload = () => {
+    updateServerList();
+    setInterval(updateServerList, 60000);
+  };
+    </script>
+    </div>
+  </div>
+</div>
+</body>
+</html>
